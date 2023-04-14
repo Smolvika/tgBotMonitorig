@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import (
 	"encoding/json"
@@ -29,14 +29,20 @@ type infoCurrency struct {
 }
 
 func parsAllInfoCurrency() (infoCurrency, error) {
-
-	usd, err := parsUSD()
+	client := http.Client{Timeout: 3 * time.Second}
+	usd, err := parsUSD(&client)
 	if err != nil {
-		return infoCurrency{}, err
+		return infoCurrency{
+			infoUSD: infoUSD{},
+			infoEUR: infoEUR{},
+		}, err
 	}
-	eur, err := parsEUR()
+	eur, err := parsEUR(&client)
 	if err != nil {
-		return infoCurrency{}, err
+		return infoCurrency{
+			infoUSD: infoUSD{},
+			infoEUR: infoEUR{},
+		}, err
 	}
 	fmt.Println(usd, eur)
 	return infoCurrency{
@@ -45,12 +51,10 @@ func parsAllInfoCurrency() (infoCurrency, error) {
 	}, nil
 }
 
-func parsUSD() (infoUSD, error) {
-	client := &http.Client{
-		Timeout: 120 * time.Second,
-	}
+func parsUSD(client *http.Client) (infoUSD, error) {
 	url := "https://bankiros.ru/ajax/moex-rate-current?currency_code=USDRUB_TOM"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("User-Agent", "Mozilla/5.0")
 	if err != nil {
 		return infoUSD{}, err
 	}
@@ -59,18 +63,16 @@ func parsUSD() (infoUSD, error) {
 		return infoUSD{}, err
 	}
 	defer res.Body.Close()
-
 	body, readErr := io.ReadAll(res.Body)
-	fmt.Println(string(body))
+	//fmt.Println(string(body))
 	if readErr != nil {
 		return infoUSD{}, err
 	}
-	jsCur1 := jsUsd{}
+	jsCur1 := jsCurrency{}
 	jsonErr := json.Unmarshal(body, &jsCur1)
 	if jsonErr != nil {
 		return infoUSD{}, err
 	}
-
 	info := infoUSD{}
 	for _, j := range jsCur1.Data {
 		info.CostUSD, err = strconv.ParseFloat(j.Last, 64)
@@ -92,26 +94,24 @@ func parsUSD() (infoUSD, error) {
 	return info, nil
 }
 
-func parsEUR() (infoEUR, error) {
-	client := &http.Client{
-		Timeout: 120 * time.Second,
-	}
+func parsEUR(client *http.Client) (infoEUR, error) {
 	url := "https://bankiros.ru/ajax/moex-rate-current?currency_code=EURRUB_TOM"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return infoEUR{}, err
 	}
+	req.Header.Set("User-Agent", "Mozilla/5.0")
 	res, err := client.Do(req)
 	if err != nil {
 		return infoEUR{}, err
 	}
-
 	defer res.Body.Close()
 	body, readErr := io.ReadAll(res.Body)
+	//fmt.Println(string(body))
 	if readErr != nil {
 		return infoEUR{}, err
 	}
-	jsCur1 := jsEur{}
+	jsCur1 := jsCurrency{}
 	jsonErr := json.Unmarshal(body, &jsCur1)
 	if jsonErr != nil {
 		return infoEUR{}, err

@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -44,7 +43,6 @@ func parsAllInfoCurrency() (infoCurrency, error) {
 			infoEUR: infoEUR{},
 		}, err
 	}
-	fmt.Println(usd, eur)
 	return infoCurrency{
 		infoUSD: usd,
 		infoEUR: eur,

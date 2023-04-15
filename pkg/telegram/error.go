@@ -1,9 +1,7 @@
 package telegram
 
 import (
-	"github.com/Smolvika/tgBotMonitorig/pkg/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/jmoiron/sqlx"
 	"log"
 	"strconv"
 	"time"
@@ -18,7 +16,6 @@ func validAndPrepare(costStr string) (float64, bool) {
 	}
 }
 
-// места возможного возникновения ошибок в коде с парсингом сайта
 var (
 	placeCallbackQuery            = "CallbackQuery message"
 	placeMessageCommand           = "MessageCommand message"
@@ -33,13 +30,13 @@ var (
 	deleteInfo                    = "deleteInfo function not work"
 )
 
-func errorsMessage(place string, err error, msgConf tgbotapi.MessageConfig, db *sqlx.DB) {
+func (b *Bot) ErrorsMessage(place string, err error, msgConf tgbotapi.MessageConfig) {
 	log.Printf("error %s: %v\n", place, err)
 	log.Printf("message Config: %v\n", msgConf)
 	if err.Error() == "Forbidden: bot was blocked by the user" {
-		err = repository.DeleteUserChatIdChangeCostDB(int(msgConf.ChatID), db)
+		err = b.db.ChangeCost.DeleteUserChatIdChangeCostDB(int(msgConf.ChatID))
 		errorsWorkDB(InfoCurrencyDB, deleteInfo, err)
-		err = repository.DeleteUserChatIdCostDB(int(msgConf.ChatID), db)
+		err = b.db.Cost.DeleteUserChatIdCostDB(int(msgConf.ChatID))
 		errorsWorkDB(ChatIdCostDB, deleteInfo, err)
 	}
 }
@@ -50,10 +47,9 @@ func errorsWorkDB(place string, operation string, err error) {
 	}
 }
 
-// Сообщение о проблемах с работой сайта
 func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 	if *errInfoBitcoinPars != nil {
-		usersChatId, err := repository.AllUserChatIdCostDB(b.db)
+		usersChatId, err := b.db.Cost.AllUserChatIdCostDB()
 		if err != nil {
 			log.Printf("error getting all possible users from CostDB:%v\n", err)
 		}
@@ -64,10 +60,10 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 решения проблемы с доступом`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
-				errorsMessage(placeSendMessageAboutError, err, msg, b.db)
+				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
 			}
 		}
-		usersChatId, err = repository.AllUserChatIdChangeCostDB(b.db)
+		usersChatId, err = b.db.ChangeCost.AllUserChatIdChangeCostDB()
 		if err != nil {
 			log.Printf("error getting all possible users from ChangeCostDB:%v\n", err)
 		}
@@ -78,15 +74,13 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 решения проблемы с доступом`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
-				errorsMessage(placeSendMessageAboutError, err, msg, b.db)
+				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
 			}
 		}
-		//ожидание исправления ошибки
 		for *errInfoBitcoinPars != nil {
 			time.Sleep(1 * time.Minute)
 		}
-		//ошибка исправлена отправляем оповещение
-		usersChatId, err = repository.AllUserChatIdCostDB(b.db)
+		usersChatId, err = b.db.Cost.AllUserChatIdCostDB()
 		if err != nil {
 			log.Printf("error getting all possible users from CostDB:%v\n", err)
 		}
@@ -94,10 +88,10 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен ежечасные оповещения о цене снова доступны`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
-				errorsMessage(placeSendMessageAboutError, err, msg, b.db)
+				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
 			}
 		}
-		usersChatId, err = repository.AllUserChatIdChangeCostDB(b.db)
+		usersChatId, err = b.db.ChangeCost.AllUserChatIdChangeCostDB()
 		if err != nil {
 			log.Printf("error getting all possible users from ChangeCostDB:%v\n", err)
 		}
@@ -105,7 +99,7 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен оповещения о достижении фиксированной цены снова доступны`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
-				errorsMessage(placeSendMessageAboutError, err, msg, b.db)
+				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
 			}
 		}
 	}

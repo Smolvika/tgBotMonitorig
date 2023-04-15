@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"fmt"
-	"github.com/Smolvika/tgBotMonitorig/pkg/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strconv"
 )
@@ -47,16 +46,15 @@ func (b *Bot) isCommandCase(update *tgbotapi.Update, currencyNow infoCurrency, e
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, helloMessage)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageCommand, err, msg)
 		}
 	case "tracking":
 		msgText := trackingMessage
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
-		//добавление кнопок
 		msg.ReplyMarkup = setRegime
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageCommand, err, msg)
 		}
 	case "rate_usd":
 		var msgText string
@@ -72,7 +70,7 @@ func (b *Bot) isCommandCase(update *tgbotapi.Update, currencyNow infoCurrency, e
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageCommand, err, msg)
 		}
 	case "rate_eur":
 		var msgText string
@@ -88,23 +86,23 @@ func (b *Bot) isCommandCase(update *tgbotapi.Update, currencyNow infoCurrency, e
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageCommand, err, msg)
 		}
 	case "stop_tracking":
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Оповещения отключены ")
-		err = repository.DeleteUserChatIdCostDB(int(update.Message.Chat.ID), b.db)
+		err = b.db.Cost.DeleteUserChatIdCostDB(int(update.Message.Chat.ID))
 		errorsWorkDB(ChatIdCostDB, deleteInfo, err)
-		err = repository.DeleteUserChatIdChangeCostDB(int(update.Message.Chat.ID), b.db)
+		err = b.db.ChangeCost.DeleteUserChatIdChangeCostDB(int(update.Message.Chat.ID))
 		errorsWorkDB(ChatIdChangeCostDB, deleteInfo, err)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageCommand, err, msg)
 		}
 	default:
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, helloMessage)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageNotCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageNotCommand, err, msg)
 		}
 	}
 }
@@ -114,33 +112,33 @@ func (b *Bot) isCallbackQuery(update *tgbotapi.Update, status map[int64]string) 
 	switch update.CallbackQuery.Data {
 	case "trackingRegime1":
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "✔ Режим отслеживания включен")
-		err = repository.AddNewUser(int(update.CallbackQuery.Message.Chat.ID), usd, b.db)
+		err = b.db.Cost.AddNewUser(int(update.CallbackQuery.Message.Chat.ID), usd)
 		errorsWorkDB(ChatIdCostDB, addInfo, err)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeCallbackQuery, err, msg, b.db)
+			b.ErrorsMessage(placeCallbackQuery, err, msg)
 		}
 	case "trackingRegime2":
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "✔ Режим отслеживания включен")
-		err = repository.AddNewUser(int(update.CallbackQuery.Message.Chat.ID), eur, b.db)
+		err = b.db.Cost.AddNewUser(int(update.CallbackQuery.Message.Chat.ID), eur)
 		errorsWorkDB(ChatIdCostDB, addInfo, err)
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeCallbackQuery, err, msg, b.db)
+			b.ErrorsMessage(placeCallbackQuery, err, msg)
 		}
 	case "trackingRegime3":
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Укажите стоимость USD, о которой нужно сообщить для этого отправьте число в формате: '123.456'")
 		status[update.CallbackQuery.Message.Chat.ID] = "CostUSD"
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeCallbackQuery, err, msg, b.db)
+			b.ErrorsMessage(placeCallbackQuery, err, msg)
 		}
 	case "trackingRegime4":
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Укажите стоимость EUR, о которой нужно сообщить для этого отправьте число в формате: '123.456'")
 		status[update.CallbackQuery.Message.Chat.ID] = "CostEUR"
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeCallbackQuery, err, msg, b.db)
+			b.ErrorsMessage(placeCallbackQuery, err, msg)
 		}
 
 	}
@@ -149,12 +147,12 @@ func (b *Bot) isCallbackQuery(update *tgbotapi.Update, status map[int64]string) 
 func (b *Bot) isUsualMessage(update *tgbotapi.Update, status map[int64]string) {
 	var err error
 	switch status[update.Message.Chat.ID] {
-	case "CostUSD": // установление цены для оповещений
+	case "CostUSD":
 		changeCost, ok := validAndPrepare(update.Message.Text)
 		var msg tgbotapi.MessageConfig
 		if ok {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Когда скачок цены USD  окажется больше чем %s₽ вы получите уведомление.", strconv.FormatFloat(changeCost, 'f', 2, 64)))
-			err = repository.AddUserChangeCostDB(int(update.Message.Chat.ID), usd, changeCost, b.db)
+			err = b.db.ChangeCost.AddUserChangeCostDB(int(update.Message.Chat.ID), usd, changeCost)
 			errorsWorkDB(ChatIdChangeCostDB, addInfo, err)
 			delete(status, update.Message.Chat.ID)
 		} else {
@@ -162,15 +160,14 @@ func (b *Bot) isUsualMessage(update *tgbotapi.Update, status map[int64]string) {
 		}
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageNotCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageNotCommand, err, msg)
 		}
-	case "CostEUR": // установление изменения цены для оповещений
+	case "CostEUR":
 		changeCost, ok := validAndPrepare(update.Message.Text)
 		var msg tgbotapi.MessageConfig
 		if ok {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Когда скачок цены EUR  окажется больше чем %s₽ вы получите уведомление.", strconv.FormatFloat(changeCost, 'f', 2, 64)))
-
-			err = repository.AddUserChangeCostDB(int(update.Message.Chat.ID), eur, changeCost, b.db)
+			err = b.db.ChangeCost.AddUserChangeCostDB(int(update.Message.Chat.ID), eur, changeCost)
 			errorsWorkDB(ChatIdChangeCostDB, addInfo, err)
 			delete(status, update.Message.Chat.ID)
 		} else {
@@ -178,7 +175,7 @@ func (b *Bot) isUsualMessage(update *tgbotapi.Update, status map[int64]string) {
 		}
 		_, err = b.bot.Send(msg)
 		if err != nil {
-			errorsMessage(placeMessageNotCommand, err, msg, b.db)
+			b.ErrorsMessage(placeMessageNotCommand, err, msg)
 		}
 	}
 }

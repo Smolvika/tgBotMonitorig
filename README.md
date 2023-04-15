@@ -7,10 +7,10 @@
 
 ###Доступные команды 
 * __/help__ - краткое описание команд бота
-  ![news](allGIF/help.gif)
-* __/rate_usd__ - информация о текущей стоимости Bitcoin`a  
+  ![help](allGIF/help.gif)
+* __/rate_usd__ - информация о текущей стоимости USD  
   ![rate_usd](allGIF/rate_usd.gif)
-* __/rate_eur__ - информация о текущей стоимости Bitcoin`a  
+* __/rate_eur__ - информация о текущей стоимости EUR 
   ![rate_eur](allGIF/rate_eur.gif)
 * __/tracking__ - настройка режимов оповещения о стоимости валюты  
   ![tracking](allGIF/tracking.gif)

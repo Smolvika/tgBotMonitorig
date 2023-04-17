@@ -1,16 +1,21 @@
 package telegram
 
 import (
+	"context"
 	"log"
 	"time"
 )
 
-func updateInfoAboutCurrency(updateRate time.Duration, bitcoinNow *infoCurrency, errInfoBitcoinPars *error) {
+func updateInfoAboutCurrency(ctx context.Context, updateRate time.Duration, currencycoinNow *infoCurrency, errInfoCurrencyNowPars *error) {
 	for {
-		time.Sleep(updateRate)
-		*(bitcoinNow), *errInfoBitcoinPars = parsAllInfoCurrency()
-		if *errInfoBitcoinPars != nil {
-			log.Printf("Problem with parsing currency information: %v\n", *errInfoBitcoinPars)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(updateRate):
+			*(currencycoinNow), *errInfoCurrencyNowPars = parsAllInfoCurrency()
+			if *errInfoCurrencyNowPars != nil {
+				log.Printf("Problem with parsing currency information: %v\n", *errInfoCurrencyNowPars)
+			}
 		}
 	}
 }

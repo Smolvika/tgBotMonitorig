@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strconv"
+	"time"
 )
 
 var setRegime = tgbotapi.NewInlineKeyboardMarkup(
@@ -39,6 +40,10 @@ var (
 )
 
 func (b *Bot) isCommandCase(update *tgbotapi.Update, currencyNow infoCurrency, errInfoCurrencyNowPars *error) {
+	start := time.Now()
+	defer func() {
+		observeRequest(time.Since(start), update.Message.Command())
+	}()
 	var err error
 	cmdText := update.Message.Command()
 	switch cmdText {

@@ -47,8 +47,8 @@ func errorsWorkDB(place string, operation string, err error) {
 	}
 }
 
-func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
-	if *errInfoBitcoinPars != nil {
+func (b *Bot) sendMessageUserAboutError(errInfoCurrencyNowPars *error) {
+	if *errInfoCurrencyNowPars != nil {
 		usersChatId, err := b.db.Cost.AllUserChatIdCostDB()
 		if err != nil {
 			log.Printf("error getting all possible users from CostDB:%v\n", err)
@@ -69,7 +69,7 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 		}
 		for userChatId := range usersChatId {
 			msg := tgbotapi.NewMessage(int64(userChatId), `Проблемы с доступом к сайту биржи
-оповещения о дохождении до фиксированной  цены некоторое время будут недоступны, 
+оповещения о дохождении валюты до фиксированной  цены некоторое время будут недоступны, 
 вы также можете настраивать уведомления, они будут работать корректно после 
 решения проблемы с доступом`)
 			_, err = b.bot.Send(msg)
@@ -77,7 +77,7 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
 			}
 		}
-		for *errInfoBitcoinPars != nil {
+		for *errInfoCurrencyNowPars != nil {
 			time.Sleep(1 * time.Minute)
 		}
 		usersChatId, err = b.db.Cost.AllUserChatIdCostDB()
@@ -85,7 +85,7 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 			log.Printf("error getting all possible users from CostDB:%v\n", err)
 		}
 		for userChatId := range usersChatId {
-			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен ежечасные оповещения о цене снова доступны`)
+			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен ежечасные оповещения о цене валюты снова доступны`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
 				b.ErrorsMessage(placeSendMessageAboutError, err, msg)
@@ -96,7 +96,7 @@ func (b *Bot) sendMessageUserAboutError(errInfoBitcoinPars *error) {
 			log.Printf("error getting all possible users from ChangeCostDB:%v\n", err)
 		}
 		for userChatId := range usersChatId {
-			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен оповещения о достижении фиксированной цены снова доступны`)
+			msg := tgbotapi.NewMessage(int64(userChatId), `Доступ к бирже возобновлен оповещения о достижении валюты фиксированной цены снова доступны`)
 			_, err = b.bot.Send(msg)
 			if err != nil {
 				b.ErrorsMessage(placeSendMessageAboutError, err, msg)

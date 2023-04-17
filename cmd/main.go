@@ -1,13 +1,17 @@
 package main
 
 import (
-	"github.com/Smolvika/tgBotMonitorig/pkg/config"
+	"context"
+	"github.com/Smolvika/tgBotMonitorig/config"
 	"github.com/Smolvika/tgBotMonitorig/pkg/repository"
 	"github.com/Smolvika/tgBotMonitorig/pkg/telegram"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -31,14 +35,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing db: %s", err.Error())
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	repos := repository.New(db)
 	telegramBot := telegram.NewBot(bot, repos)
-	if err := telegramBot.Start(); err != nil {
-		log.Fatalf("Problem with parsing currency information:%v", err)
-	}
+	go func() {
+		if err := telegramBot.Start(ctx); err != nil {
+			log.Fatalf("Problem with parsing currency information:%v", err)
+		}
+	}()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+	cancel()
+	log.Println(" tgBot Shutting Down")
 
 	if err := db.Close(); err != nil {
 		log.Printf("Failed to close database:%v\n", err)
 	}
-
 }
